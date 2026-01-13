@@ -1,8 +1,13 @@
+#i öppna cmd skriv: python -m pip install beautifulsoup4
+#python -m pip install flask
 from flask import Flask, request, jsonify
 import json
 import os
+
+from datetime import datetime
 # Blueprints används för att dela upp stora appar i mindre moduler/filer
-from myblueprints.friends_bp import friends_bp 
+from myblueprints.friends_bp import friends_bp
+from myblueprints.dunews_bp import dunews_bp 
 
 # Skapar själva Flask-appen
 app = Flask(__name__)
@@ -17,6 +22,7 @@ API_KEY = "abcd"
 # automatiskt får den här texten framför sig.
 #http://127.0.0.1:5000/api/v1/friends/?api_key=abcd
 app.register_blueprint(friends_bp, url_prefix='/api/v1/friends')
+app.register_blueprint(dunews_bp, url_prefix='/dunews')
 
 # --- HJÄLPFUNKTIONER (Datahantering) ---
 def load_data():
@@ -56,6 +62,22 @@ def check_api_key():
 def home():
     """Enkel startsida för att se att servern lever."""
     return "Hello from flask"
+
+@app.route("/hello/<name>")
+def hello_there(name):
+    now = datetime.now()
+    """
+    Code	Meaning	                                        Example Output
+    %A	    The full weekday name.	                        Monday, Tuesday...
+    %d	    The day of the month as a zero-padded number.	01, 15, 31
+    %B	    The full month name.	                        January, February...
+    %Y	    The four-digit year.	                        2026
+    %X	    The locale’s appropriate time representation.	08:50:18
+    """
+    formatted_now = now.strftime("%A, %d %B, %Y at %X")
+    content = "Hello there, " + name + "! It's " + formatted_now
+    return content
+
 
 # --- CRUD Operations (Create, Read, Update, Delete) ---
 # http://127.0.0.1:5000/friends?api_key=abcd
@@ -127,6 +149,7 @@ def delete_friend(friend_id):
     updated_data = [f for f in data if f['id'] != friend_id]
 
     # Om listans längd är samma, hittades inget att ta bort
+    #404 Not Found: Resursen finns inte
     if len(updated_data) == len(data):
         return jsonify({"error": "Friend not found"}), 404
 
