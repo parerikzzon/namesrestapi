@@ -7,7 +7,9 @@ import os
 from datetime import datetime
 # Blueprints används för att dela upp stora appar i mindre moduler/filer
 from myblueprints.friends_bp import friends_bp
-from myblueprints.dunews_bp import dunews_bp 
+from myblueprints.dunews_bp import dunews_bp
+from myblueprints.duschema_bp import duschema_bp 
+
 
 # Skapar själva Flask-appen
 app = Flask(__name__)
@@ -23,6 +25,7 @@ API_KEY = "abcd"
 #http://127.0.0.1:5000/api/v1/friends/?api_key=abcd
 app.register_blueprint(friends_bp, url_prefix='/api/v1/friends')
 app.register_blueprint(dunews_bp, url_prefix='/dunews')
+app.register_blueprint(duschema_bp, url_prefix='/duschema')
 
 # --- HJÄLPFUNKTIONER (Datahantering) ---
 def load_data():
