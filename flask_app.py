@@ -9,6 +9,7 @@ from datetime import datetime
 from myblueprints.friends_bp import friends_bp
 from myblueprints.dunews_bp import dunews_bp
 from myblueprints.duschema_bp import duschema_bp 
+from myblueprints.regex_bp import regex_bp
 
 
 # Skapar själva Flask-appen
@@ -26,6 +27,7 @@ API_KEY = "abcd"
 app.register_blueprint(friends_bp, url_prefix='/api/v1/friends')
 app.register_blueprint(dunews_bp, url_prefix='/dunews')
 app.register_blueprint(duschema_bp, url_prefix='/duschema')
+app.register_blueprint(regex_bp, url_prefix='/regex')
 
 # --- HJÄLPFUNKTIONER (Datahantering) ---
 def load_data():
