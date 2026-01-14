@@ -1,8 +1,10 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, render_template
 import requests
 from bs4 import BeautifulSoup
 
-duschema_bp = Blueprint('duschema_bp', __name__)
+duschema_bp = Blueprint('duschema_bp', 
+                        __name__, 
+                        template_folder='templates')# Denna pekar på mappen inuti din blueprint-mapp
 
 #http://127.0.0.1:5000/duschema/?api_key=abcd
 @duschema_bp.route('/')
@@ -24,7 +26,19 @@ def get_schema():
         "schema": data_schema
 
     }), 200
+
+#http://127.0.0.1:5000/duschema/view?api_key=abcd
+@duschema_bp.route('/view')
+def show_schema():
+    #return "view route funkar"
+    data_schema = skrapa_schema_data()
     
+    # Istället för jsonify skickar vi nu listan till vår HTML-fil
+    return render_template('schema.html', schema=data_schema)
+
+
+
+#-----hjälp funktion    
 def skrapa_schema_data():
     # URL till schemat (TimeEdit grafisk vy)
     url = "https://cloud.timeedit.net/hda/web/public/ri1t6fZ7YQb1bnQY53Q9YQtnZ507fX966n5756ny.html"
@@ -53,15 +67,17 @@ def skrapa_schema_data():
         #loopar all div:ar där schemapostioner/bokningar finns
         for bokning in bokningar_divs:
             # Extrahera strängen från 'title'-attributet i diven
-            # Din exempel-div har all info i 'title', t.ex. "2026-01-21 15:00 - 17:00..."
+            # Din exempel-div har all info i 'title' tex
             #title=" 2026-01-22 10:00 - 12:00 H3LLJ_DITMG, GMI35S_V3NJJ, Handledning, Ulrika Artursson Wissa, Internet, Samtal298 (zoom) ID 669241"></div>
             info_strang_title = bokning.get('title', '')
             
             if info_strang_title:
                 # Skapar en array/lista baserat på den komma separerade sträng i title
                 #title=" 2026-01-22 10:00 - 12:00 H3LLJ_DITMG, GMI35S_V3NJJ, Handledning, Ulrika Artursson Wissa, Internet, Samtal298 (zoom) ID 669241"
-                detaljer_title_array = info_strang_title .strip().split(',')
-                #Anropar hjälp funktioner för att plock rätt delar ur arrayen 
+                #strip ta bort onödiga mellanslag i början och slut på strängen, 
+                # split splatr upp sträng till en lista/array av strängen baserat på den separatron i vårt fall kommatecken ",";
+                detaljer_title_array = info_strang_title .strip().split(',') 
+                #Anropar hjälp funktioner för att plocka rätt delar ur arrayen 
                 datumet=get_datum(detaljer_title_array)
                 tiden=get_tid(detaljer_title_array)
                 kursen=get_kurskod(detaljer_title_array)
@@ -146,9 +162,9 @@ def get_larare(title_array):
     larar_namn = title_array[3].strip()
 
     # Om ordet 'grupp' finns i texten, så är det inte läraren vi hittat.
-    # Då hämatr i bakifrån: dvs på index -3 är ofta lärarens plats i dessa fall.
+    # Då hämtar vi bakifrån istället: då på index -3 där lärarens plats i så fall är.
     if "grupp" in  larar_namn .lower():
-        return title_array[-3].strip()# läser bakifrån i arrayen och då ligger lärern på  index -3
+        return title_array[-3].strip()# läser bakifrån i arrayen och då ligger läraren på  index -3
     
     return  larar_namn 
 

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitt Schema</title>
+    
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Dagens Schema</h1>
+            <p>Här visas aktuella lektioner och bokningar hämtade från TimeEdit.</p>
+        </header>
+
+        <section aria-labelledby="schema-rubrik">
+            <h2 id="schema-rubrik" class="visually-hidden">Aktuella lektionstillfällen</h2>
+
+            {% for post in schema %}
+            <article class="lektion-kort">
+                <header>
+                    <h3>{{ post.kurs }}</h3>
+                    <p class="typ">{{ post.typ }}</p>
+                </header>
+
+                <div class="detaljer">
+                    <p>
+                        <time datetime="{{ post.datum }}"><strong>När:</strong> {{ post.datum }}</time> 
+                        kl. {{ post.tid }}
+                    </p>
+                    <p><strong>Lärare:</strong> {{ post.larare }}</p>
+                    <p><strong>Sal:</strong> {{ post.lokal }}</p>
+                </div>
+            </article>
+            <hr>
+            {% endfor %}
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Schema-appen - Skrapad från TimeEdit</p>
+    </footer>
+</body>
+</html>
