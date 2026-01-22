@@ -6,7 +6,12 @@ import os
 
 from datetime import datetime
 # Blueprints används för att dela upp stora appar i mindre moduler/filer
-from myblueprints.friends_bp import friends_bp
+from myblueprints.friends_messy_bp import friends_messy_bp
+from myblueprints.friends_refactor_bp import friends_refactor_bp
+from myblueprints.friends_validate_clean_bp import friends_validate_bp
+from myblueprints.friends_apikey_bp import friends_apikey_bp
+from myblueprints.friends_respository_bp import friends_repository_bp
+
 from myblueprints.dunews_bp import dunews_bp
 from myblueprints.duschema_bp import duschema_bp 
 from myblueprints.regex_bp import regex_bp
@@ -23,26 +28,20 @@ API_KEY = "abcd"
 # Registrera en Blueprint. Det gör att vi kan gruppera rutter.
 # url_prefix='/api/v1/friends' betyder att alla rutter i den filen 
 # automatiskt får den här texten framför sig.
-#http://127.0.0.1:5000/api/v1/friends/?api_key=abcd
-app.register_blueprint(friends_bp, url_prefix='/api/v1/friends')
+app.register_blueprint(friends_messy_bp, url_prefix='/api/v2/friends')#http://127.0.0.1:5000/api/v2/friends
+app.register_blueprint(friends_refactor_bp, url_prefix='/api/v3/friends')#http://127.0.0.1:5000/api/v3/friends
+app.register_blueprint(friends_validate_bp, url_prefix='/api/v4/friends')#http://127.0.0.1:5000/api/v4/friends
+app.register_blueprint(friends_apikey_bp, url_prefix='/api/v5/friends') #http://127.0.0.1:5000/api/v5/friends/?api_key=abc
+app.register_blueprint(friends_repository_bp, url_prefix='/api/v6/friends') #http://127.0.0.1:5000/api/v6/friends/?api_key=abc
+
+
 app.register_blueprint(dunews_bp, url_prefix='/dunews')
 app.register_blueprint(duschema_bp, url_prefix='/duschema')
 app.register_blueprint(regex_bp, url_prefix='/regex')
 
-# --- HJÄLPFUNKTIONER (Datahantering) ---
-def load_data():
-    """Laddar vänner från JSON-filen. Skapar en tom lista om filen inte finns."""
-    if not os.path.exists(JSON_FRIENDS_FILE):
-        return []
-    with open(JSON_FRIENDS_FILE, 'r') as json_friends:
-        return json.load(json_friends)
-
-def save_data(data):
-    """Sparar ner hela listan med vänner till JSON-filen med snygg formatering (indent)."""
-    with open(JSON_FRIENDS_FILE, 'w') as json_friends:
-        json.dump(data,json_friends, indent=4)
 
 # --- MIDDLEWARE / SÄKERHET ---
+'''
 @app.before_request
 def check_api_key():
     """
@@ -60,7 +59,7 @@ def check_api_key():
     if key != API_KEY:
         # 401 Unauthorized är rätt HTTP-statuskod för saknad behörighet
         return jsonify({"error": "Unauthorized: Invalid or missing API Key"}), 401
-
+'''
 # --- ROUTES (Själva API-ändpunkterna) ---
 
 @app.route('/', methods=['GET'])
@@ -85,82 +84,93 @@ def hello_there(name):
 
 
 # --- CRUD Operations (Create, Read, Update, Delete) ---
-# http://127.0.0.1:5000/friends?api_key=abcd
-@app.route('/friends', methods=['GET'])
+# http://127.0.0.1:5000/api/v1/friends
+@app.route('/api/v1/friends', methods=['GET'])
 def get_friends():
-    """Hämtar alla vänner. Använder GET för att läsa data."""
-    # 200 OK: Standard för lyckad hämtning
-    return jsonify(load_data()), 200
+    # 'with open' öppnar filen friends.json så vi kan läsa den ('r' står för read)
+    with open('friends.json', 'r') as f:
+        # json.load förvandlar innehållet i filen till en vanlig Python-lista
+        data = json.load(f)
+    
+    # jsonify förvandlar Python-listan tillbaka till JSON-format så webbläsaren förstår den.
+    # 200 är statuskoden för 'OK'.
+    return jsonify(data), 200
 
-#http://127.0.0.1:5000/friends/1?api_key=abcd
-@app.route('/friends/<int:friend_id>', methods=['GET'])
+#http://127.0.0.1:5000/api/v1/friends/1
+@app.route('/api/v1/friends/<int:friend_id>', methods=['GET'])
 def get_friend_by_id(friend_id):
-    """
-    Hämtar en enskild vän baserat på ID.
-    <int:friend_id> i URL:en gör att Flask skickar med siffran som ett argument till funktionen.
-    """
-    data = load_data()
+    with open('friends.json', 'r') as f:
+        data = json.load(f)
     
-    # Vi letar igenom listan efter en vän med matchande ID
-    # 'next' hämtar det första objektet som matchar villkoret, eller None om det inte finns
-    friend = next((f for f in data if f['id'] == friend_id), None)
+    # Vi går igenom listan 'data', en person i taget (vi kallar varje person för 'friend')
+    for friend in data:
+        # Om personens id är samma som det id som står i URL:en...
+        if friend['id'] == friend_id:
+            # HTTP stus kod 200 för ett lyckat anrop. Används oftast vid GET (hämta), PUT (uppdatera) och DELETE (ta bort). 
+            # Det betyder: "Här är det du bad om" tex en vän med detta id eller alla vänner eller "Jag har utfört ändringen".
+            return jsonify(friend), 200
+            
+    # Om vi har gått igenom hela listan utan att hitta id:t, skickar vi ett felmeddelande.
+    # 404 betyder 'Hittades inte'. Du försöker letar efter en vän med ett ID som inte existerar i JSON-filen.
+    return jsonify({"error": "Hittades inte"}), 404
 
-    if friend:
-        # Om vännen hittas, returnera den med status 200 OK
-        return jsonify(friend), 200
-    else:
-        # Om vännen inte finns, returnera ett felmeddelande med 404 Not Found
-        return jsonify({"error": f"Friend with ID {friend_id} not found"}), 404
-    
-@app.route('/friends', methods=['POST'])
+##http://127.0.0.1:5000/api/v1/friends   
+@app.route('/api/v1/friends', methods=['POST'])
 def add_friend():
-    """Skapar en ny vän. Använder POST för att skicka data till servern."""
-    data = load_data()
-    # request.json hämtar den data (JSON) som användaren skickade med i anropet
+    with open('friends.json', 'r') as f:
+        data = json.load(f)
+    
+    # request.json hämtar den data som användaren skickade (t.ex. från Postman)
     new_friend = request.json
-
-    # Enkel validering: Vi kräver att objektet har ett ID
-    if not new_friend or 'id' not in new_friend:
-        # 400 Bad Request: När klienten skickat felaktig eller ofullständig data
-        return jsonify({"error": "Invalid data"}), 400
-
+    
+    # Vi lägger till den nya vännen i vår lista
     data.append(new_friend)
-    save_data(data)
-    # 201 Created: Används när man har lyckats skapa en ny resurs
+    
+    # Nu öppnar vi filen igen, men med 'w' (write) för att skriva över den med den nya listan
+    with open('friends.json', 'w') as f:
+        # indent=4 gör att JSON-filen ser snygg och läsbar ut för människor
+        json.dump(data, f, indent=4)
+        
+    # 201 betyder 'Created' (Skapad). Vi skickar tillbaka den nya vännen som bekräftelse.
+    #Används specifikt vid POST. Det betyder: "Jag har tagit emot din data och skapat en ny resurs (t.ex. en ny vän i listan)".
     return jsonify(new_friend), 201
-
-@app.route('/friends/<int:friend_id>', methods=['PUT'])
+#http://127.0.0.1:5000/api/v1/friends/1
+@app.route('/api/v1/friends/<int:friend_id>', methods=['PUT'])
 def update_friend(friend_id):
-    """Uppdaterar en befintlig vän baserat på ID. Använder PUT."""
-    data = load_data()
-    # Letar upp rätt vän i listan
+    with open('friends.json', 'r') as f:
+        data = json.load(f)
+    
     for friend in data:
         if friend['id'] == friend_id:
-            # .update() slår ihop den gamla datan med den nya från request.json
+            # .update tar informationen från användaren och ändrar fälten i vårt objekt
             friend.update(request.json)
-            save_data(data)
-            # 200 OK: Uppdateringen lyckades
+            
+            # Spara ner hela den uppdaterade listan till filen igen
+            with open('friends.json', 'w') as f:
+                json.dump(data, f, indent=4)
             return jsonify(friend), 200
 
-    # Om vi loopat igenom allt utan att hitta ID:t
-    # 404 Not Found: Resursen finns inte
-    return jsonify({"error": "Friend not found"}), 404
+    return jsonify({"error": "Hittades inte"}), 404
 
-@app.route('/friends/<int:friend_id>', methods=['DELETE'])
+#http://127.0.0.1:5000/api/v1/friends/1
+@app.route('/api/v1/friends/<int:friend_id>', methods=['DELETE'])
 def delete_friend(friend_id):
-    """Tar bort en vän baserat på ID. Använder DELETE."""
-    data = load_data()
-    # Skapar en ny lista där vi hoppar över den vän som ska bort (List Comprehension)
-    updated_data = [f for f in data if f['id'] != friend_id]
-
-    # Om listans längd är samma, hittades inget att ta bort
-    #404 Not Found: Resursen finns inte
-    if len(updated_data) == len(data):
-        return jsonify({"error": "Friend not found"}), 404
-
-    save_data(updated_data)
-    # 200 OK (eller 204 No Content) bekräftar att borttagningen lyckades
-    return jsonify({"message": "Deleted successfully"}), 200
+    with open('friends.json', 'r') as f:
+        data = json.load(f)
+    
+    # Vi skapar en tom lista där vi ska lägga alla vänner vi vill ha kvar
+    new_data = []
+    for friend in data:
+        # Om personens id INTE är det id vi vill ta bort...
+        if friend['id'] != friend_id:
+            # ...så lägger vi till dem i den nya listan.
+            new_data.append(friend)
+            
+    # Spara den nya listan (där den borttagna personen nu saknas)
+    with open('friends.json', 'w') as f:
+        json.dump(new_data, f, indent=4)
+        
+    return jsonify({"message": "Borttagen"}), 200
 
 # Startar applikationen
 if __name__ == "__main__": 

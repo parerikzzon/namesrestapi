@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Friends CRUD</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        form { background: #f9f9f9; padding: 15px; border: 1px solid #ccc; max-width: 400px; }
+        .btn-del { color: red; cursor: pointer; margin-right: 10px; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Mina Vänner</h1>
+
+    <form id="friendForm">
+        <h3 id="formTitle">Lägg till ny vän</h3>
+        <input type="number" id="id" placeholder="ID" required>
+        <input type="text" id="name" placeholder="Namn" required>
+        <input type="email" id="email" placeholder="E-post" required>
+        <input type="text" id="status" placeholder="Status" required>
+        <br><br>
+        <button type="submit" id="submitBtn">Spara Vän</button>
+        <button type="button" id="cancelBtn" style="display:none;" onclick="resetForm()">Avbryt</button>
+    </form>
+
+    <table id="friendsTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Namn</th>
+                <th>E-post</th>
+                <th>Status</th>
+                <th>Åtgärder</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+        // VIKTIGT: Kontrollera att denna URL matchar din Blueprint prefix i app.py
+        const API_URL = '/api/v6/friends/'; //du kan testa andra endpinbts tex /api/v3/friends/
+        const API_KEY = 'abc';
+        let isEditing = false; // Håller koll på om vi ska köra POST eller PUT
+
+        // 1. Ladda alla vänner (GET)
+        async function loadFriends() {
+            try {
+                const res = await fetch(`${API_URL}?api_key=${API_KEY}`);
+                const data = await res.json();
+                const tbody = document.querySelector('#friendsTable tbody');
+                tbody.innerHTML = '';
+                
+                data.forEach(f => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${f.id}</td>
+                            <td>${f.name}</td>
+                            <td>${f.email}</td>
+                            <td>${f.status}</td>
+                            <td>
+                                <span class="btn-del" onclick="deleteFriend(${f.id})">Radera</span>
+                                <button onclick="prepareUpdate(${f.id}, '${f.name}', '${f.email}', '${f.status}')">Ändra</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Kunde inte ladda vänner:", err);
+            }
+        }
+
+        // 2. Skapa eller Uppdatera (POST/PUT)
+        document.getElementById('friendForm').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const friendId = document.getElementById('id').value;
+            const friendData = {
+                id: parseInt(friendId),
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                status: document.getElementById('status').value
+            };
+
+            // Om isEditing är sant kör vi PUT mot /id, annars POST mot /
+            const method = isEditing ? 'PUT' : 'POST';
+            const url = isEditing ? `${API_URL}${friendId}?api_key=${API_KEY}` : `${API_URL}?api_key=${API_KEY}`;
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(friendData)
+            });
+
+            if (response.ok) {
+                resetForm();
+                loadFriends();
+            } else {
+                const errorData = await response.json();
+                alert("Fel: " + (errorData.message || "Kunde inte spara"));
+            }
+        };
+
+        // 3. Radera (DELETE)
+        async function deleteFriend(id) {
+            if(confirm('Vill du verkligen radera?')) {
+                await fetch(`${API_URL}${id}?api_key=${API_KEY}`, { method: 'DELETE' });
+                loadFriends();
+            }
+        }
+
+        // 4. Förbered för uppdatering
+        function prepareUpdate(id, name, email, status) {
+            isEditing = true;
+            document.getElementById('id').value = id;
+            document.getElementById('id').disabled = true; // ID får inte ändras
+            document.getElementById('name').value = name;
+            document.getElementById('email').value = email;
+            document.getElementById('status').value = status;
+            
+            document.getElementById('formTitle').innerText = "Uppdatera vän";
+            document.getElementById('submitBtn').innerText = "Spara ändringar";
+            document.getElementById('cancelBtn').style.display = "inline";
+        }
+
+        // 5. Nollställ formulär
+        function resetForm() {
+            isEditing = false;
+            document.getElementById('friendForm').reset();
+            document.getElementById('id').disabled = false;
+            document.getElementById('formTitle').innerText = "Lägg till ny vän";
+            document.getElementById('submitBtn').innerText = "Spara Vän";
+            document.getElementById('cancelBtn').style.display = "none";
+        }
+
+        // Starta genom att ladda listan
+        loadFriends();
+    </script>
+</body>
+</html>

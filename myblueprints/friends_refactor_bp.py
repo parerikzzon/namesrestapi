@@ -2,11 +2,7 @@
 from flask import Blueprint, request, jsonify
 import json
 import os
-
-friends_bp = Blueprint('friends_bp', __name__)
-
-
-API_KEY = "abcd"
+friends_refactor_bp = Blueprint('friends_refactor_bp', __name__)
 JSON_DATA_FILE = 'friends.json'
 def load_data():
     if not os.path.exists(JSON_DATA_FILE):
@@ -18,28 +14,16 @@ def save_data(data):
     with open(JSON_DATA_FILE, 'w') as json_friends:
         json.dump(data, json_friends, indent=4)
 
-# Security Check
-@friends_bp.before_request
-def check_api_key():
-    # 1. Try to get the key from the Header
-    key = request.headers.get('x-api-key')
-
-    # 2. If it's not in the header, look in the URL parameters (friends?api_key=...)
-    if not key:
-        key = request.args.get('api_key')
-
-    if key != API_KEY:
-        return jsonify({"error": "Unauthorized: Invalid or missing API Key"}), 401
 
 # --- CRUD Operations ---
-#http://127.0.0.1:5000/api/v3/friends/?api_key=abcd
-@friends_bp.route('/', methods=['GET'])
+#http://127.0.0.1:5000/api/v3/friends/
+@friends_refactor_bp.route('/', methods=['GET'])
 def get_friends():
     # 200 OK: Standard response for successful GET
     return jsonify(load_data()), 200
 
-#http://127.0.0.1:5000/api/v1/friends/1?api_key=abcd
-@friends_bp.route('/<int:friend_id>', methods=['GET'])
+#http://127.0.0.1:5000/api/v3/friends/1
+@friends_refactor_bp.route('/<int:friend_id>', methods=['GET'])
 def get_friend_by_id(friend_id):
     """
     Hämtar en enskild vän baserat på ID.
@@ -58,8 +42,8 @@ def get_friend_by_id(friend_id):
         # Om vännen inte finns, returnera ett felmeddelande med 404 Not Found
         return jsonify({"error": f"Friend with ID {friend_id} not found"}), 404
 
-#api/v1/friends
-@friends_bp.route('/', methods=['POST'])
+
+@friends_refactor_bp.route('/', methods=['POST'])
 def add_friend():
     data = load_data()
     new_friend = request.json
@@ -74,7 +58,7 @@ def add_friend():
     return jsonify(new_friend), 201
 
 
-@friends_bp.route('/<int:friend_id>', methods=['PUT'])
+@friends_refactor_bp.route('/<int:friend_id>', methods=['PUT'])
 def update_friend(friend_id):
     data = load_data()
     for friend in data:
@@ -87,7 +71,7 @@ def update_friend(friend_id):
     # 404 Not Found: Resource with that ID doesn't exist
     return jsonify({"error": "Friend not found"}), 404
 #api/v1/friends/2
-@friends_bp.route('/<int:friend_id>', methods=['DELETE'])
+@friends_refactor_bp.route('/<int:friend_id>', methods=['DELETE'])
 def delete_friend(friend_id):
     data = load_data()
     updated_data = [f for f in data if f['id'] != friend_id]

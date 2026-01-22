@@ -1,20 +1,20 @@
 [
     {
-        "id": 1,
-        "name": "John Doe",
-        "email": "john@example.com",
-        "status": "Best Friend"
+        "id": 3,
+        "name": "Mike Rosss",
+        "email": "mike@law.com",
+        "status": "Close friend"
     },
     {
         "id": 2,
-        "name": "Jane Smith",
-        "email": "jane@example.com",
+        "name": "Projektgrupp",
+        "email": "pei@du.se",
         "status": "Colleague"
     },
     {
-        "id": 3,
-        "name": "Mike Ross",
-        "email": "mike@law.com",
-        "status": "Close Friend"
+        "id": 1,
+        "name": "Test",
+        "email": "pei@du.se",
+        "status": "Foe"
     }
 ]
