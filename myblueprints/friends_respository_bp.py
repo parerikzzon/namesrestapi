@@ -12,6 +12,8 @@ repo = FriendRepository('friends.json')
 # Global konstant för e-postmönster
 EMAIL_REGEX = r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$'
 
+VALID_API_KEY = "abc"  # Vår enkla, fasta nyckel
+
 # --- 1. SANITIZATION FUNCTION (Tvättning) ---
 
 def sanitize_value(value):
@@ -51,8 +53,31 @@ def validate_friend(friend_data, is_new=True):
             return False, "Invalid email format."
 
     return True, None
-
+# --- Säkerhetskontroll ---
+#Genom att lägga det i @before_request skyddar vi hela Blueprinten på en gång. Om den inte går igenom, körs aldrig koden i övriga end points/route överhuvudtaget.
+#http://127.0.0.1:5000/api/v6/friends/?api_key=abc
+@friends_repository_bp.before_request
+def check_api_key():
+    """
+    Denna funktion körs AUTOMATISKT före varje anrop till denna blueprint.
+    Om nyckeln saknas eller är fel, stoppar vi anropet direkt.
+    """
+    # 1. Kolla om nyckeln finns i Headern (Standard i API:er)
+    api_key = request.headers.get('x-api-key')
+    
+    # 2. Om den inte fanns där, kolla i URL:en (?api_key=abc)
+    if not api_key:
+        api_key = request.args.get('api_key')
+        
+    # 3. Validera nyckeln
+    if api_key != VALID_API_KEY:
+        # 401 Unauthorized: Stopp! Du har inte behörighet.
+        return jsonify({
+            "error": "Unauthorized", 
+            "message": "Du måste ange en giltig API-nyckel för att få tillgång."
+        }), 401
 # --- API ROUTES ---
+#http://127.0.0.1:5000/api/v6/friends/?api_key=abc
 @friends_repository_bp.route('/', methods=['GET'])
 def get_friends():
     """
@@ -64,6 +89,7 @@ def get_friends():
     # Vi skickar tillbaka listan som JSON med statuskod 200 (OK)
     return jsonify(all_friends), 200
 
+#http://127.0.0.1:5000/api/v6/friends/1?api_key=abc
 @friends_repository_bp.route('/<int:friend_id>', methods=['GET'])
 def get_friend_by_id(friend_id):
     """

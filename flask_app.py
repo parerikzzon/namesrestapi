@@ -40,26 +40,6 @@ app.register_blueprint(duschema_bp, url_prefix='/duschema')
 app.register_blueprint(regex_bp, url_prefix='/regex')
 
 
-# --- MIDDLEWARE / SÄKERHET ---
-'''
-@app.before_request
-def check_api_key():
-    """
-    Körs innan VARJE anrop. Kontrollerar att användaren har skickat med rätt API-nyckel.
-    Detta är ett enkelt sätt att skydda sitt API.
-    """
-    # 1. Letar först i Headern (Standard i professionella API:er)
-    key = request.headers.get('x-api-key')
-
-    # 2. Om den inte finns där, kolla i URL-parametrarna (?api_key=abcd)
-    if not key:
-        key = request.args.get('api_key')
-
-    # Om nyckeln inte matchar vår API_KEY, stoppa anropet direkt
-    if key != API_KEY:
-        # 401 Unauthorized är rätt HTTP-statuskod för saknad behörighet
-        return jsonify({"error": "Unauthorized: Invalid or missing API Key"}), 401
-'''
 # --- ROUTES (Själva API-ändpunkterna) ---
 
 @app.route('/', methods=['GET'])

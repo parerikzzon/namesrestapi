@@ -1,14 +1,38 @@
 [
     {
-        "id": 3,
-        "name": "Mike Rosss",
-        "email": "mike@law.com",
-        "status": "Close friend"
+        "id": 1,
+        "name": "Harvey Specter",
+        "email": "harvey@law.com",
+        "status": "Best friend"
     },
     {
         "id": 2,
         "name": "Projektgrupp",
         "email": "pei@du.se",
         "status": "Colleague"
+    },
+    {
+        "id": 3,
+        "name": "Mike Ross",
+        "email": "mike@law.com",
+        "status": "Close friend"
+    },
+    {
+        "id": 4,
+        "name": "Donna Paulsen",
+        "email": "donna@law.com",
+        "status": "Awesome"
+    },
+    {
+        "id": 5,
+        "name": "Louis Litt",
+        "email": "louis@law.com",
+        "status": "Acquaintance"
+    },
+    {
+        "id": 6,
+        "name": "Rachel Zane",
+        "email": "rachel@law.com",
+        "status": "Friend"
     }
 ]

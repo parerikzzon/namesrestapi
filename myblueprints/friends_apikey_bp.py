@@ -8,6 +8,19 @@ friends_apikey_bp = Blueprint('friends_apikey_bp', __name__)
 JSON_DATA_FILE = 'friends.json'
 VALID_API_KEY = "abc"  # Vår enkla, fasta nyckel
 
+
+
+# --- Hjälpfunktioner ---
+def load_data():
+    if not os.path.exists(JSON_DATA_FILE):
+        return []
+    with open(JSON_DATA_FILE, 'r') as f:
+        return json.load(f)
+
+def save_data(data):
+    with open(JSON_DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
 # --- Säkerhetskontroll ---
 #Genom att lägga det i @before_request skyddar vi hela Blueprinten på en gång. Om den inte går igenom, körs aldrig koden i övriga end points/route överhuvudtaget.
 @friends_apikey_bp.before_request
@@ -30,17 +43,6 @@ def check_api_key():
             "error": "Unauthorized", 
             "message": "Du måste ange en giltig API-nyckel för att få tillgång."
         }), 401
-
-# --- Hjälpfunktioner ---
-def load_data():
-    if not os.path.exists(JSON_DATA_FILE):
-        return []
-    with open(JSON_DATA_FILE, 'r') as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(JSON_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
 
 # --- CRUD Operations dess körs inte om man inte passera @friends_security_bp.before_request ---
 #http://127.0.0.1:5000/api/v5/friends/?api_key=abc
