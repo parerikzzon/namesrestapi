@@ -1,135 +1,145 @@
-from flask import Blueprint, request, jsonify, render_template
-import json
-import os
-"""
-# --- REPOSITORY KLASS ---
-# Denna klass sköter all kontakt med JSON-filen
-class FriendRepository:
-    def __init__(self, file_path):
-        self.file_path = file_path
-
-    def _load(self):
-        if not os.path.exists(self.file_path):
-            return []
-        with open(self.file_path, 'r') as f:
-            return json.load(f)
-
-    def _save(self, data):
-        with open(self.file_path, 'w') as f:
-            json.dump(data, f, indent=4)
-
-    def get_all(self):
-        return self._load()
-
-    def get_by_id(self, friend_id):
-        data = self._load()
-        return next((f for f in data if f['id'] == friend_id), None)
-
-    def add(self, friend_dict):
-        data = self._load()
-        data.append(friend_dict)
-        self._save(data)
-        return friend_dict
-
-    def update(self, friend_id, updates):
-        data = self._load()
-        for friend in data:
-            if friend['id'] == friend_id:
-                friend.update(updates)
-                self._save(data)
-                return friend
-        return None
-
-    def delete(self, friend_id):
-        data = self._load()
-        if not any(f['id'] == friend_id for f in data):
-            return False
-        updated_data = [f for f in data if f['id'] != friend_id]
-        self._save(updated_data)
-        return True
-"""
-# --- BLUEPRINT KONFIGURATION ---
-# Från mappen repositories (punkt betyder 'inuti denna mapp') 
-# importera filen friendrepository.py och klassen FriendRepository
+from flask import Blueprint, request, jsonify
+import re
+# Vi hämtar klassen från mappen 'myblueprints/repositories' och filen 'friend_repository'
 from .repositories.friendrepository import FriendRepository
 
-# Skapa instansen av repot precis som vanligt
+# Skapar Blueprint
+friends_repository_bp = Blueprint('friends_repository_bp', __name__)
+
+# Initiera repository-instansen med sökvägen till JSON-filen
 repo = FriendRepository('friends.json')
-friends_repository_bp = Blueprint('friends_repository_bp', __name__, template_folder='templates')
-VALID_API_KEY = "abc"
-repo = FriendRepository('friends.json')# anvädn i endposnte/routes för att gör crdu opertion mot json filen
 
-# --- SÄKERHET (DÖRRVAKT) ---
+# Global konstant för e-postmönster
+EMAIL_REGEX = r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$'
 
-@friends_repository_bp.before_request
-def check_api_key():
-    # Kollar både Headers och URL-parametrar
-    api_key = request.headers.get('x-api-key') or request.args.get('api_key')
-    if api_key != VALID_API_KEY:
-        return jsonify({
-            "error": "Unauthorized", 
-            "message": "Giltig API-nyckel krävs"
-        }), 401
+# --- 1. SANITIZATION FUNCTION (Tvättning) ---
 
-# --- ROUTES (CRUD) ---
+def sanitize_value(value):
+    """
+    Rensar bort HTML-taggar och tar bort mellanslag i början/slutet.
+    Studenter: Detta steg gör att datan blir säker att hantera.
+    """
+    if value is None:
+        return ""
+    # Tar bort allt som ser ut som en HTML-tagg: <...>
+    clean_text = re.sub(r'<.*?>', '', str(value))
+    return clean_text.strip()
 
+# --- 2. VALIDATION FUNCTION (Validering) ---
+
+def validate_friend(friend_data, is_new=True):
+    """
+    Kontrollerar affärsregler på den tvättade datan.
+    Returnerar (True, None) om allt är okej.
+    """
+    # Kolla ID om det är en ny vän (POST)
+    if is_new:
+        if not isinstance(friend_data.get('id'), int):
+            return False, "ID must be an integer."
+        # Använder repositoryt för att kolla om ID redan finns
+        if repo.get_by_id(friend_data.get('id')):
+            return False, "ID already exists."
+
+    # Kolla Namn (Längd)
+    if 'name' in friend_data:
+        if not (2 <= len(friend_data['name']) <= 50):
+            return False, "Name must be between 2 and 50 characters."
+
+    # Kolla E-post (Format via Regex)
+    if 'email' in friend_data:
+        if not re.match(EMAIL_REGEX, friend_data['email']):
+            return False, "Invalid email format."
+
+    return True, None
+
+# --- API ROUTES ---
 @friends_repository_bp.route('/', methods=['GET'])
 def get_friends():
-    return jsonify(repo.get_all()), 200
+    """
+    Hämtar alla vänner.
+    Anropar repo.get_all() som sköter filkontakten.
+    """
+    all_friends = repo.get_all()
+    
+    # Vi skickar tillbaka listan som JSON med statuskod 200 (OK)
+    return jsonify(all_friends), 200
 
 @friends_repository_bp.route('/<int:friend_id>', methods=['GET'])
 def get_friend_by_id(friend_id):
+    """
+    Hämtar en enskild vän med hjälp av repositoryt.
+    """
+    # Vi ber repositoryt att hitta vännen åt oss
     friend = repo.get_by_id(friend_id)
+
     if friend:
+        # Om vännen finns (inte är None), returnera den
         return jsonify(friend), 200
-    return jsonify({"error": "Not Found", "message": "Vännen hittades inte"}), 404
+    
+    # Om vännen inte hittades (None), returnera 404
+    return jsonify({"error": f"Friend with ID {friend_id} not found"}), 404
 
 @friends_repository_bp.route('/', methods=['POST'])
 def add_friend():
-    incoming = request.json
+    incoming = request.get_json()
+
+    # Kontrollera att alla fält finns med i anropet
     required = ['id', 'name', 'email', 'status']
-    
-    # Validering: Saknas fält?
-    if not incoming or not all(k in incoming for k in required):
-        return jsonify({"error": "Bad Request", "message": "id, name, email och status krävs"}), 400
+    if not incoming or not all(field in incoming for field in required):
+        return jsonify({"error": "Bad Request", "message": "Missing required fields"}), 400
 
-    # Validering: Finns ID redan?
-    if repo.get_by_id(incoming['id']):
-        return jsonify({"error": "Conflict", "message": "ID:t är redan upptaget"}), 409
-
-    # Tvättning (Sanitization)
-    clean_friend = {
-        "id": incoming['id'],
-        "name": incoming['name'].strip().title(),
-        "email": incoming['email'].strip().lower(),
-        "status": incoming['status'].strip().capitalize()
+    # STEG 1: SANITIZE (Tvätta inkommande data först)
+    clean_data = {
+        "id": incoming.get('id'),
+        "name": sanitize_value(incoming.get('name')),
+        "email": sanitize_value(incoming.get('email')).lower(),
+        "status": sanitize_value(incoming.get('status'))
     }
 
-    result = repo.add(clean_friend)
-    return jsonify(result), 201
+    # STEG 2: VALIDATE (Kontrollera regler på den rena datan)
+    is_valid, error_msg = validate_friend(clean_data, is_new=True)
+    if not is_valid:
+        return jsonify({"error": "Validation Error", "message": error_msg}), 400
+
+    # STEG 3: FORMAT & REPOSITORY (Spara via klassen)
+    # Vi snyggar till texten precis innan den sparas
+    clean_data["name"] = clean_data["name"].title()
+    clean_data["status"] = clean_data["status"].capitalize()
+
+    new_friend = repo.add(clean_data)
+    return jsonify(new_friend), 201
 
 @friends_repository_bp.route('/<int:friend_id>', methods=['PUT'])
-def update_friend(friend_id):
-    incoming = request.json
+def pdate_friend(friend_id):
+    incoming = request.get_json()
+    
+    # Kontrollera om vännen finns i vårt repository
     if not repo.get_by_id(friend_id):
-        return jsonify({"error": "Not Found", "message": "Vännen finns inte"}), 404
+        return jsonify({"error": "Not Found"}), 404
 
-    # Tvättning av fält som ska uppdateras
+    # STEG 1: SANITIZE (Tvätta bara de fält som skickats)
     updates = {}
-    if 'name' in incoming: updates['name'] = incoming['name'].strip().title()
-    if 'email' in incoming: updates['email'] = incoming['email'].strip().lower()
-    if 'status' in incoming: updates['status'] = incoming['status'].strip().capitalize()
+    if 'name' in incoming: updates['name'] = sanitize_value(incoming['name'])
+    if 'email' in incoming: updates['email'] = sanitize_value(incoming['email']).lower()
+    if 'status' in incoming: updates['status'] = sanitize_value(incoming['status'])
+
+    # STEG 2: VALIDATE (Kolla reglerna på den tvättade datan)
+    is_valid, error_msg = validate_friend(updates, is_new=False)
+    if not is_valid:
+        return jsonify({"error": "Validation Error", "message": error_msg}), 400
+
+    # STEG 3: FORMAT & UPDATE
+    if 'name' in updates: updates['name'] = updates['name'].title()
+    if 'status' in updates: updates['status'] = updates['status'].capitalize()
 
     updated_friend = repo.update(friend_id, updates)
     return jsonify(updated_friend), 200
 
+
+
 @friends_repository_bp.route('/<int:friend_id>', methods=['DELETE'])
 def delete_friend(friend_id):
+    # Repository-klassen sköter logiken för borttagning
     if repo.delete(friend_id):
-        return jsonify({"message": f"Vän med ID {friend_id} raderad"}), 200
-    return jsonify({"error": "Not Found", "message": "Kunde inte hitta vännen"}), 404
-
-@friends_repository_bp.route('/ui')
-def friends_page():
-    # Laddar HTML-filen från /myblueprints/templates/crudview.html
-    return render_template('crudview.html')
+        return jsonify({"message": f"Friend {friend_id} deleted"}), 200
+    return jsonify({"error": "Not Found"}), 404

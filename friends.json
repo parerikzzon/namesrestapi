@@ -10,11 +10,5 @@
         "name": "Projektgrupp",
         "email": "pei@du.se",
         "status": "Colleague"
-    },
-    {
-        "id": 1,
-        "name": "Test",
-        "email": "pei@du.se",
-        "status": "Foe"
     }
 ]
