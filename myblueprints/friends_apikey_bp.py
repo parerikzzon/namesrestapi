@@ -1,4 +1,4 @@
-# myblueprints/friends_bp.py
+# myblueprints/friends_apikey_bp.py
 from flask import Blueprint, request, jsonify, render_template
 import json
 import os
@@ -22,7 +22,8 @@ def save_data(data):
         json.dump(data, f, indent=4)
 
 # --- Säkerhetskontroll ---
-#Genom att lägga det i @before_request skyddar vi hela Blueprinten på en gång. Om den inte går igenom, körs aldrig koden i övriga end points/route överhuvudtaget.
+#Genom att lägga det i @before_request skyddar vi hela Blueprinten på en gång. Om den inte går igenom, körs aldrig koden 
+# i övriga end-points/route överhuvudtaget.
 @friends_apikey_bp.before_request
 def check_api_key():
     """

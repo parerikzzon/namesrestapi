@@ -1,3 +1,4 @@
+# myblueprints/friends_repository_bp.py
 from flask import Blueprint, request, jsonify
 import re
 # Vi hämtar klassen från mappen 'myblueprints/repositories' och filen 'friend_repository'

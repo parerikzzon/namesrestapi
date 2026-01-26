@@ -11,6 +11,7 @@ from myblueprints.friends_refactor_bp import friends_refactor_bp
 from myblueprints.friends_validate_clean_bp import friends_validate_bp
 from myblueprints.friends_apikey_bp import friends_apikey_bp
 from myblueprints.friends_respository_bp import friends_repository_bp
+from myblueprints.friends_restful_bp import friends_restful_bp
 
 from myblueprints.dunews_bp import dunews_bp
 from myblueprints.duschema_bp import duschema_bp 
@@ -33,6 +34,7 @@ app.register_blueprint(friends_refactor_bp, url_prefix='/api/v3/friends')#http:/
 app.register_blueprint(friends_validate_bp, url_prefix='/api/v4/friends')#http://127.0.0.1:5000/api/v4/friends
 app.register_blueprint(friends_apikey_bp, url_prefix='/api/v5/friends') #http://127.0.0.1:5000/api/v5/friends/?api_key=abc
 app.register_blueprint(friends_repository_bp, url_prefix='/api/v6/friends') #http://127.0.0.1:5000/api/v6/friends/?api_key=abc
+app.register_blueprint(friends_restful_bp,url_prefix='/api/v7/friends') #http://127.0.0.1:5000/api/v7/friends/?api_key=abc
 
 
 app.register_blueprint(dunews_bp, url_prefix='/dunews')

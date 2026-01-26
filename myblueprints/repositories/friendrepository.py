@@ -1,4 +1,5 @@
 # --- REPOSITORY KLASS ---
+#myblueprints/repositories/friendrepository.py
 # Denna klass sköter all kontakt med JSON-filen
 import json
 import os
@@ -17,7 +18,11 @@ class FriendRepository:
             json.dump(data, f, indent=4)
 
     def get_all(self):
-        return self._load()
+        data = self._load()
+        # Vi sorterar listan 'data' baserat på nyckeln 'id' i varje dictionary.
+        # sorted() returnerar en ny, sorterad lista.
+        sorted_data = sorted(data, key=lambda friend: friend['id'])
+        return sorted_data #self._load()
 
     def get_by_id(self, friend_id):
         data = self._load()

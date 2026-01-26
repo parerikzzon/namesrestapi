@@ -2,147 +2,221 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Friends CRUD</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        form { background: #f9f9f9; padding: 15px; border: 1px solid #ccc; max-width: 400px; }
-        .btn-del { color: red; cursor: pointer; margin-right: 10px; }
-        button { cursor: pointer; }
-    </style>
+    <title>Vän-Manager CRUD</title>
+ <style>
+    /* Bara lite luft så att allt inte sitter ihop */
+    body { font-family: sans-serif; padding: 20px; }
+    
+    /* Gör så att inputfälten hamnar på egna rader */
+    input { display: block; margin-bottom: 10px; width: 100%; max-width: 300px; }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse; /* Tar bort dubbla linjer mellan celler */
+        margin-top: 20px;
+    }
+
+    td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #ddd; /* Skapar snygga rader */
+    }
+
+    /* Skapa mellanrum mellan knappar */
+    button { margin: 5px;cursor: pointer; }
+</style>
 </head>
 <body>
 
-    <h1>Mina Vänner</h1>
+<div class="container">
+    <h1>Vän-Manager</h1>
+    
+    <div id="editor">
+        <h3 id="form-title">Lägg till ny vän</h3>
+        <div class="form-group">
+            <label>ID:</label>
+            <input type="number" id="f_id" placeholder="T.ex. 6" >
+        </div>
+        <div class="form-group">
+            <label>Namn:</label>
+            <input type="text" id="f_name">
+        </div>
+        <div class="form-group">
+            <label>E-post:</label>
+            <input type="email" id="f_email">
+        </div>
+        <div class="form-group">
+            <label>Status:</label>
+            <input type="text" id="f_status">
+        </div>
+        <div class="actions">
+            <button class="btn-save" id="save-btn" onclick="handleSave()">Spara ny vän</button>
+            <button class="btn-update" id="update-btn" onclick="handleUpdate()" style="display:none;">Uppdatera vän</button>
+            <button onclick="resetForm()">Avbryt</button>
+        </div>
+    </div>
 
-    <form id="friendForm">
-        <h3 id="formTitle">Lägg till ny vän</h3>
-        <input type="number" id="id" placeholder="ID" required>
-        <input type="text" id="name" placeholder="Namn" required>
-        <input type="email" id="email" placeholder="E-post" required>
-        <input type="text" id="status" placeholder="Status" required>
-        <br><br>
-        <button type="submit" id="submitBtn">Spara Vän</button>
-        <button type="button" id="cancelBtn" style="display:none;" onclick="resetForm()">Avbryt</button>
-    </form>
+    <hr>
 
-    <table id="friendsTable">
-        <thead>
+    <h3>Lista över vänner</h3>
+    <table id="friendList"></table>
+</div>
+
+<script>
+// url/end point/route till vår api
+const API_URL = "http://127.0.0.1:5000/api/v7/friends/";
+
+// HEADERS är som ett "kuvert" med extra info som vi skickar till servern (vårt api). 
+// Vi talar om att vi skickar JSON och bifogar vår hemliga API-nyckel.
+const HEADERS = {
+    "Content-Type": "application/json",
+    "x-api-key": "abc"
+};
+
+/**
+ * 1. HÄMTA DATA (GET)
+ * Används för att läsa information från servern.
+ */
+async function loadFriends() {
+    // fetch() skickar anropet till vårt rest apis endpoint. Vi väntar (await) på svar.
+    const res = await fetch(API_URL, { 
+        headers: { "x-api-key": "abc" } 
+    });
+
+    // Vi vänatr på att svaret onmvandlas från JSON-text till ett JavaScript-objekt.
+    const data = await res.json();
+    
+    // Hitta div-elementet i HTML där vi ska skriva ut listan på vår vänner.
+    const list = document.getElementById('friendList');
+    list.innerHTML = ""; // Töm listan innan vi ritar upp den på nytt.
+   
+    // Loopa igenom alla vänner vi fick från API:et.
+    data.forEach(f => {
+        // Vi skapar HTML-kod för varje vän med "Template Literals" (backticks ` `).
+        list.innerHTML += `
             <tr>
-                <th>ID</th>
-                <th>Namn</th>
-                <th>E-post</th>
-                <th>Status</th>
-                <th>Åtgärder</th>
-            </tr>
-        </thead>
-        <tbody>
-            </tbody>
-    </table>
-
-    <script>
-        // VIKTIGT: Kontrollera att denna URL matchar din Blueprint prefix i app.py
-        const API_URL = '/api/v6/friends/'; //du kan testa andra endpinbts tex /api/v3/friends/
-        const API_KEY = 'abc';
-        let isEditing = false; // Håller koll på om vi ska köra POST eller PUT
-
-        // 1. Ladda alla vänner (GET)
-        async function loadFriends() {
-            try {
-                const res = await fetch(`${API_URL}?api_key=${API_KEY}`);//vänatr in det häamtd data från vårt rest api.
-                const data = await res.json();//väntar på att det görs om till json
-                const tbody = document.querySelector('#friendsTable tbody');
-                tbody.innerHTML = '';
                 
-                data.forEach(friend => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${friend.id}</td>
-                            <td>${friend.name}</td>
-                            <td>${friend.email}</td>
-                            <td>${friend.status}</td>
-                            <td>
-                                <span class="btn-del" onclick="deleteFriend(${f.id})">Radera</span>
-                                <button onclick="prepareUpdate(${friend.id}, '${friend.name}', '${friend.email}', '${friend.status}')">Ändra</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (err) {
-                console.error("Kunde inte ladda vänner:", err);
-            }
-        }
-
-        // 2. Skapa eller Uppdatera (POST/PUT)
-        document.getElementById('friendForm').onsubmit = async (e) => {
-            e.preventDefault();
+                <td>id #: ${f.id}</td>
+                <td><strong>${f.name}</strong> (${f.status})<td>
+                <td>${f.email}</td>
             
-            const friendId = document.getElementById('id').value;//hämtar in från textfältet
-            const friendData = {
-                id: parseInt(friendId),
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                status: document.getElementById('status').value
-            };
-
-            // Om isEditing är sant kör vi PUT mot /id, annars POST mot /
-            //http://127.0.0.1:5000/api/v5/friends/?api_key=abc     --> en POST för att lägg till en ny vän
-            //http://127.0.0.1:5000/api/v5/friends/2?api_key=abc    -->PUT för att uppdater på id 2
-            const method = isEditing ? 'PUT' : 'POST';
-            const url = isEditing ? `${API_URL}${friendId}?api_key=${API_KEY}` : `${API_URL}?api_key=${API_KEY}`;
             
-            //Ett asynkront nätverksanrop som skickar data till din server.
-            const response = await fetch(url, {
-                method: method,//vilken hhtp verb metod put or post
-                headers: { 'Content-Type': 'application/json' },//vad för typ av data skickas=json
-                body: JSON.stringify(friendData) //själv datat gör om tillen sträng som skicka i http body till servern
-            });
+                <td>
+                    <button onclick="prepareUpdate(${f.id}, '${f.name}', '${f.email}', '${f.status}')">Redigera</button>
+                    <button onclick="handleDelete(${f.id})">Radera</button>
+                <td>
+               
+            </tr>`;
+    });
+}
 
-            if (response.ok) {
-                resetForm();
-                loadFriends();
-            } else {
-                const errorData = await response.json();
-                alert("Fel: " + (errorData.message || "Kunde inte spara"));
-            }
-        };
+/**
+ * 2. SKAPA NY (POST)
+ * Används för att skicka ny data till servern.
+ */
+async function handleSave() {
+    // Vi samlar ihop datan från formuläret till ett objekt.
+    const body = {
+        id: parseInt(document.getElementById('f_id').value), // Gör om text till heltal
+        name: document.getElementById('f_name').value,
+        email: document.getElementById('f_email').value,
+        status: document.getElementById('f_status').value
+    };
 
-        // 3. Radera (DELETE)
-        async function deleteFriend(id) {
-            if(confirm('Vill du verkligen radera?')) {
-                await fetch(`${API_URL}${id}?api_key=${API_KEY}`, { method: 'DELETE' });
-                loadFriends();
-            }
-        }
+    // Vi skickar anropet med metod POST och skickar med vår 'body' som JSON-text.
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: HEADERS,
+        body: JSON.stringify(body) // Gör om objektet till en textsträng
+    });
 
-        // 4. Förbered för uppdatering
-        function prepareUpdate(id, name, email, status) {
-            isEditing = true;
-            document.getElementById('id').value = id;
-            document.getElementById('id').disabled = true; // ID får inte ändras
-            document.getElementById('name').value = name;
-            document.getElementById('email').value = email;
-            document.getElementById('status').value = status;
-            
-            document.getElementById('formTitle').innerText = "Uppdatera vän";
-            document.getElementById('submitBtn').innerText = "Spara ändringar";
-            document.getElementById('cancelBtn').style.display = "inline";
-        }
+    if (res.ok) { 
+        resetForm();    // Töm formuläret om det gick bra
+        loadFriends();  // Ladda listan på nytt för att se den nya vännen
+    } else { 
+        const err = await res.json(); 
+        alert("Fel från servern: " + err.message); 
+    }
+}
 
-        // 5. Nollställ formulär
-        function resetForm() {
-            isEditing = false;
-            document.getElementById('friendForm').reset();
-            document.getElementById('id').disabled = false;
-            document.getElementById('formTitle').innerText = "Lägg till ny vän";
-            document.getElementById('submitBtn').innerText = "Spara Vän";
-            document.getElementById('cancelBtn').style.display = "none";
-        }
+/**
+ * 3. RADERA (DELETE)
+ * Används för att ta bort ett specifikt objekt via dess ID.
+ */
+async function handleDelete(id) {
+    // Enkel bekräftelse-ruta i webbläsaren
+    if (!confirm("Vill du radera vän " + id + "?")) return;
+    
+    // Vi lägger till ID:t i slutet av URL:en, t.ex. .../friends/1
+    
+    const res = await fetch(`${API_URL}${id}`, {
+        method: 'DELETE',
+        headers: { "x-api-key": "abc" }
+    });
 
-        // Starta genom att ladda listan
-        loadFriends();
-    </script>
+    if (res.ok) loadFriends();
+}
+
+/**
+ * 4. FÖRBERED UPPDATERING
+ * Denna körs lokalt i webbläsaren för att flytta data till formuläret.
+ */
+function prepareUpdate(id, name, email, status) {
+    // Fyll i alla input-fält med den valda vännens info
+    document.getElementById('f_id').value = id;
+    document.getElementById('f_id').disabled = true; // ID får inte ändras vid uppdatering
+    document.getElementById('f_name').value = name;
+    document.getElementById('f_email').value = email;
+    document.getElementById('f_status').value = status;
+
+    // Byt knappar så att "Spara" döljs och "Uppdatera" visas
+    document.getElementById('save-btn').style.display = 'none';
+    document.getElementById('update-btn').style.display = 'block';    
+
+}
+
+/**
+ * 5. UPPDATERA (PUT)
+ * Skickar ändringarna till servern för ett befintligt ID.
+ */
+async function handleUpdate() {
+    const idToUpdate = document.getElementById('f_id').value;
+    
+    const body = {
+        id:idToUpdate,
+        name: document.getElementById('f_name').value,
+        email: document.getElementById('f_email').value,
+        status: document.getElementById('f_status').value
+    };
+
+    // Skicka PUT-anrop till den specifika vännens URL
+    //http://127.0.0.1:5000/api/v7/friends/2?api_key=abc
+    const res = await fetch(`${API_URL}${idToUpdate}`, {
+        method: 'PUT',
+        headers: HEADERS,
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) { 
+        resetForm(); 
+        loadFriends(); 
+    }
+}
+
+// Hjälpfunktion för att nollställa formuläret till standardläge
+function resetForm() {
+    document.getElementById('f_id').value = "";
+    document.getElementById('f_id').disabled = false;
+    document.getElementById('f_name').value = "";
+    document.getElementById('f_email').value = "";
+    document.getElementById('f_status').value = "";
+    document.getElementById('save-btn').style.display = 'block';
+    document.getElementById('update-btn').style.display = 'none';
+}
+
+// Kör igång appen genom att ladda listan direkt
+loadFriends();
+</script>
+
 </body>
 </html>

@@ -1,4 +1,4 @@
-# myblueprints/friends_bp.py
+# myblueprints/friends_refactor_bp.py
 from flask import Blueprint, request, jsonify
 import json
 import os

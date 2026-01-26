@@ -3,19 +3,13 @@
         "id": 1,
         "name": "Harvey Specter",
         "email": "harvey@law.com",
-        "status": "Best friend"
-    },
-    {
-        "id": 2,
-        "name": "Projektgrupp",
-        "email": "pei@du.se",
-        "status": "Colleague"
+        "status": "Best friendd"
     },
     {
         "id": 3,
         "name": "Mike Ross",
         "email": "mike@law.com",
-        "status": "Close friend"
+        "status": "Close friendd"
     },
     {
         "id": 4,
@@ -34,5 +28,17 @@
         "name": "Rachel Zane",
         "email": "rachel@law.com",
         "status": "Friend"
+    },
+    {
+        "id": 7,
+        "name": "Sadf",
+        "email": "pei@du.se",
+        "status": "Asdf"
+    },
+    {
+        "id": 2,
+        "name": "Jonna Love",
+        "email": "jonna@law.com",
+        "status": "Awesome"
     }
 ]

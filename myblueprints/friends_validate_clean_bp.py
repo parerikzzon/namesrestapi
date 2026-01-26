@@ -8,6 +8,16 @@ friends_validate_bp = Blueprint('friends_validate_bp', __name__)
 JSON_DATA_FILE = 'friends.json'
 
 # Global konstants för validering
+"""
+Symbol,Meaning
+^               Start of string: Ensures the match begins at the very first character.
+[a-z0-9._%+-]+  "Username: Matches one or more lowercase letters, numbers, or special characters (., _, %, +, -)."
+@               "At symbol: A literal match for the ""@"" character."
+[a-z0-9.-]+     "Domain name: Matches one or more lowercase letters, numbers, dots, or hyphens."
+\.              "Literal Dot: Matches the actual ""."" character (the backslash escapes it)."
+"[a-z]{2,}"     "Extension: Matches at least two or more lowercase letters (e.g., com, edu, gov)."
+$               End of string: Ensures the match ends exactly after the extension.
+"""
 EMAIL_REGEX = r'^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$'
 
 # --- Utility Functions (Hjälpfunktioner) ---
