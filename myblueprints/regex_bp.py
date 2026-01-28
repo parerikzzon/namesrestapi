@@ -104,7 +104,7 @@ PATTERNS = {
     # \b[0-9a-fA-F]{32}\b -> exakt 32 hextecken, avgränsat av word boundaries
     #
     # Forensik/hot: används för att identifiera filer via hash (malware-signaturer,
-    # IOC-listor, jämförelse mot threat intel).
+    # IOC-listor(Indicators of Compromise (på svenska: indikatorer på intrång)), jämförelse mot threat intel).
     "md5_hash": r'\b[0-9a-fA-F]{32}\b',
 
     # SHA256 HASH
