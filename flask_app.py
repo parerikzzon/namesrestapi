@@ -39,7 +39,7 @@ app.register_blueprint(friends_restful_bp,url_prefix='/api/v7/friends') #http://
 
 app.register_blueprint(dunews_bp, url_prefix='/dunews')
 app.register_blueprint(duschema_bp, url_prefix='/duschema')
-app.register_blueprint(regex_bp, url_prefix='/regex')
+app.register_blueprint(regex_bp, url_prefix='/regex') # test olika regex
 
 
 # --- ROUTES (Själva API-ändpunkterna) ---

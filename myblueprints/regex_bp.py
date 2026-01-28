@@ -1,245 +1,133 @@
-from flask import Blueprint, jsonify
-import re
-regex_bp = Blueprint('regex_bp', __name__)
+from flask import Flask, Blueprint, request, jsonify
+import re # för att kunna skriv regex
 
-"""
-Här är en sammanställning där förklaring, Python-kod och resultat är samlade för varje exempel. Detta är  perfekt för att snabbt komma igång med `re`-modulen i Python.
+#Vi skapar en ny Blueprint för regex
+regex_bp = Blueprint('reg_bp', __name__)
 
----
-
-### 1. `\d` (Siffra)
-
-Matchar en enstaka siffra mellan 0 och 9.
-
-```python
-import re
-text = "Agent 007"
-# Söker efter tre siffror i rad
-match = re.search(r"\d\d\d", text)
-print(match.group())  # Resultat: 007
-
-```
-
-### 2. `+` (En eller flera)
-
-Används efter ett tecken för att matcha det en eller flera gånger i rad.
-
-```python
-
-text = "Användare12345 loggade in"
-# Söker efter alla siffror som sitter ihop
-match = re.search(r"\d+", text)
-print(match.group())  # Resultat: 12345
-
-```
-
-### 3. `{}` (Kvantifierare)
-
-Anger exakt hur många gånger föregående tecken ska upprepas.
-
-```python
-
-text = "Felkod: 5542"
-# Söker efter exakt 4 siffror
-match = re.search(r"\d{4}", text)
-print(match.group())  # Resultat: 5542
-
-```
-
-### 4. `[]` (Teckenuppsättning)
-
-Matchar ett (och endast ett) av tecknen inuti klamrarna.
-```python
-
-text = "bild.png"
-# Matchar antingen 'p' eller 'j' följt av 'ng'
-match = re.search(r"[pj]ng", text)
-print(match.group())  # Resultat: png
-
-```
-
-### 5. `.` (Punkt / Joker)
-
-Matchar vilket tecken som helst utom radbrytning.
-
-```python
-
-text = "admin, admon, adm1n"
-# Punkten matchar 'i', 'o' och '1'
-matches = re.findall(r"adm.n", text)
-print(matches)  # Resultat: ['admin', 'admon', 'adm1n']
-
-```
-
-### 6. `\b` (Ordbegränsning)
-
-Säkerställer att matchningen börjar och slutar som ett eget ord (förhindrar träffar inuti andra ord).
-
-```python
-
-text = "bil, lastbil, bilat"
-# Hittar bara ordet 'bil', inte där det är en del av ett längre ord
-matches = re.findall(r"\bbil\b", text)
-print(matches)  # Resultat: ['bil']
-
-```
-
-### 7. `^` (Början av sträng)
-
-Tvingar mönstret att matcha endast om det finns i början av strängen eller raden.
-
-```python
-
-text = "START: Systemet körs"
-# Matchar bara om 'START' står först
-match = re.search(r"^START", text)
-if match:
-    print(match.group())  # Resultat: START
-
-```
-
-### 8. `()` (Gruppering)
-
-Används för att "fånga in" en specifik del av en matchning så att man kan hämta ut den separat.
-
-```python
-
-text = "IP: 192.168.1.1"
-# Vi matchar hela 'IP: ...' men sparar bara siffrorna i en grupp ()
-match = re.search(r"IP: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", text)
-if match:
-    print(match.group(1))  # Resultat: 192.168.1.1 (endast det i parentesen)
-
-```
-
----
-
-### Hur man kombinerar dessa
-
-Inom IT-säkerhet kombinerar man ofta dessa. Till exempel:
-`^` + `\d{4}` + `-` + `\d{2}` skulle matcha ett datum som står först på en rad i en loggfil.
-
-**Vill du att vi testar att bygga ett "kombinations-uttryck" för att hitta något mer komplext, som t.ex. ett specifikt felmeddelande i en serverlogg?**
-
-"""
-
-
-# http://127.0.0.1:5000/regex/?api_key=abcd
-@regex_bp.route('/')
-def get_regex_tutorial():
-    # En lista med pedagogiska objekt
-    examples = [
-        
-        {
-            "id": "pris",
-            "label": "Pris-extraktion",
-            "text": "Medlemskap kostar 299 kr och frakt 49 kr.",
-            "pattern": r"(\d+)\s?kr",
-            "desc": "(\\d+): fångar en eller flera siffror. \\s?: valfritt mellanslag. kr: letar efter exakta tecken."
-        },
-        {
-            "id": "email",
-            "label": "E-post",
-            "text": "Maila support@test.se",
-            "pattern": r"[\w\.-]+@[\w\.-]+\.\w+",
-            "desc": "[\\w\\.-]+: bokstäver/siffror/punkt före @. @: matchar symbolen. \\w+: domännamn. \\.\\w+: punkt följt av toppdomän."
-        },
-        {
-            "id": "url_simple",
-            "label": "Webbadresser (URL)",
-            "text": "Besök https://www.google.com för info.",
-            "pattern": r"https?://[\w\.-]+",
-            "desc": "http: exakta tecken. s?: gör 's' valfritt (matchar http/https). ://: matchar snedstrecken. [\\w\\.-]+: matchar domänen."
-        },
-        {
-            "id": "named_groups",
-            "label": "Namngivna Grupper",
-            "text": "Användare: Johan, ID: 4502",
-            "pattern": r"Användare: (?P<namn>\w+), ID: (?P<id>\d+)",
-            "desc": "(?P<namn>\\w+): fångar ord och sparar det under nyckeln 'namn'. \\d+: fångar siffror till nyckeln 'id'."
-        },
-        {
-            "id": "whitespace_cleanup",
-            "label": "Städa mellanslag",
-            "text": "Detta    är  smutsigt.",
-            "pattern": r"\s{2,}",
-            "desc": "\\s: matchar mellanrum (space/tab). {2,}: betyder 'två eller fler gånger i rad'."
-        },
-        {
-            "id": "date_iso",
-            "label": "Datum (ISO)",
-            "text": "Deadline är 2024-12-24.",
-            "pattern": r"(\d{4})-(\d{2})-(\d{2})",
-            "desc": "(\\d{4}): fångar 4 siffror (år). -: matchar bindestreck. (\\d{2}): fångar 2 siffror (månad/dag)."
-        },
-        {
-            "id": "word_boundaries",
-            "label": "Exakta ord",
-            "text": "En bil körde förbi, bilen var blå.",
-            "pattern": r"\bbil\b",
-            "desc": "\\b: ordgräns. Ser till att mönstret inte matchar om 'bil' är en del av ett längre ord som 'bilen'."
-        },
-        {
-            "id": "ip_address",
-            "label": "IP-adresser (IPv4)",
-            "text": "IP: 192.168.1.1",
-            "pattern": r"(?:\d{1,3}\.){3}\d{1,3}",
-            "desc": "(?:\\d{1,3}\\.){3}: repeterar 1-3 siffror + punkt tre gånger. \\d{1,3}: den sista siffergruppen."
-        },
-        {
-            "id": "html_tags",
-            "label": "HTML-taggar",
-            "text": "Visa <b>fet</b> text.",
-            "pattern": r"<[^>]*>",
-            "desc": "<: början på tagg. [^>]*: matchar allt som INTE är en slutparentes. >: stänger taggen."
-        },
-        {
-            "id": "swedish_pnr",
-            "label": "Personnummer",
-            "text": "Nummer: 850512-1234",
-            "pattern": r"\d{6}[-+]?\d{4}",
-            "desc": "\\d{6}: de första 6 siffrorna. [-+]?: valfritt minus eller plus. \\d{4}: de sista 4 siffrorna."
-        }
+# --- Några vanliga regex ---
+PATTERNS = {
     
-    ]
+    # --- VARDAGLIG VALIDERING ---
+    # Exempel: "nisse.svensson@gmail.com", "info@foretag.se"
+    # E-POST
+    # [a-z0-9._%+-]+ -> Matcha bokstäver/siffror/tecken EN eller FLERA gånger (+)
+    # @ -> Letar efter ett bokstavligt @-tecken
+    # \.[a-z]{2,} -> Letar efter en punkt (\.) följt av minst 2 bokstäver ({2,})
+    # [a-z0-9._%+-]+ -> Matcha bokstäver/siffror/tecken EN eller FLERA gånger (+)
+    # @ -> Letar efter ett bokstavligt @-tecken
+    # \.[a-z]{2,} -> Letar efter en punkt (\.) följt av minst 2 bokstäver ({2,})
+    "email": r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
 
-    lessons = []
+    # Exempel: "123 45" eller "54321"
+    # SVENSKT POSTNUMMER
+    # \d{3} -> Exakt tre siffror (\d)
+    # \s? -> Ett valfritt (?) mellanslag (\s)
+    # \d{2} -> Exakt två siffror till
+    "swe_postnummer": r'\d{3}\s?\d{2}',
 
-    # 1. Vi går igenom varje lektion/exempel i vår lista
-    for ex in examples:
-        matches = [] # Här sparar vi alla träffar vi hittar i just DENNA text
+    # Exempel: "070-1234567", "0731234567", "076 1234567"
+    # SVENSKT MOBILNUMMER
+    # 07[02369] -> Börjar på 07 följt av någon av siffrorna i haken []
+    # \s?-? -> Tillåter valfritt mellanslag ELLER bindestreck
+    "swe_mobile": r'07[02369]\s?-?\d{7}',
+
+    # Exempel: href="https://google.com" (fångar det inuti citattecknen)
+    # HTML-LÄNKAR
+    # href=" -> Letar efter den exakta textsträngen
+    # ([^"]*) -> Parenteser skapar en GRUPP. ^" betyder "allt utom citattecken". * betyder noll eller flera.
+    "html_links": r'href="([^"]*)"',
+    
+    # --- IT-FORENSIK: NÄTVERK & IDENTIFIERING ---
+    # Exempel: "192.168.1.1", "8.8.8.8", "10.0.0.254"
+    # IPv4-ADRESS
+    # \b -> Word boundary: ser till att IP:n inte är en del av ett längre ord
+    # (?:[0-9]{1,3}\.){3} -> Repeterar gruppen (1-3 siffror + punkt) exakt 3 gånger
+    "ipv4": r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b',
+
+    # Exempel: "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+    # IPv6-ADRESS
+    # [0-9a-fA-F]{1,4} -> Matcha 1 till 4 hexadecimala tecken
+    # : -> Letar efter bokstavliga kolon som separerar grupperna
+    "ipv6": r'\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b',
+
+    # Exempel: "00:1A:2B:3C:4D:5E" eller "00-1A-2B-3C-4D-5E"
+    # MAC-ADRESS
+    # [0-9a-fA-F]{2} -> Två hex-tecken (t.ex. 4A)
+    # [:-] -> Matcha antingen kolon ELLER bindestreck som separator
+    "mac_address": r'(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}',
+    
+    # --- IT-FORENSIK: FILANALYS & MALWARE ---
+    # Exempel: "C:\Windows\System32\drivers\etc\hosts", "D:\Bilder\foto.jpg"
+    # WINDOWS FILVÄG
+    # [a-zA-Z]:\\ -> Enhetsbokstav följt av kolon och ett bokstavligt backslash (dubbelt \\ behövs i kod)
+    # [^\\\/:*?"<>|\r\n]+ -> Matcha alla tecken som INTE är förbjudna i filnamn
+    "windows_path": r'[a-zA-Z]:\\(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*',
+
+    # Exempel: "/var/log/auth.log", "/etc/shadow", "/home/user/.bashrc"
+    # LINUX FILVÄG
+    # / -> Måste börja med ett framåtlutat snedstreck
+    # (?:[\w.-]+/)+ -> Matcha mappar (bokstäver/siffror/punkt/streck + /) EN eller FLERA gånger
+    "linux_path": r'/(?:[\w.-]+/)+[\w.-]+',
+
+    # Exempel: "5d41402abc4b2a76b9719d911017c592" (32 tecken långt fingeravtryck)
+    # MD5 HASH
+    # \b...\b -> Boundary: Säkerställer att vi hittar EXAKT 32 tecken, inte 32 tecken inuti något annat
+    "md5_hash": r'\b[0-9a-fA-F]{32}\b',
+
+    # Exempel: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" (64 tecken)
+    # SHA256 HASH
+    # {64} -> Letar efter exakt 64 hexadecimala tecken i följd
+    "sha256_hash": r'\b[0-9a-fA-F]{64}\b',
+    
+    # --- IT-FORENSIK: SÅRBARHETER & KOD ---
+    # Exempel: "CVE-2021-44228", "CVE-2023-1234"
+    # CVE-ID (Common Vulnerabilities and Exposures)
+    # CVE- -> Den fasta texten "CVE-"
+    # \d{4} -> Årtalet (4 siffror)
+    # -\d{4,7} -> Ett bindestreck följt av mellan 4 och 7 siffror (ID-numret)
+    "cve_id": r'CVE-\d{4}-\d{4,7}',
+
+    # Exempel: "SGVsbG8gV29ybGQgdGhpcyBpcyBhIGJhc2U2NCB0ZXN0IHN0cmluZy4=" (Kodad data)
+    # BASE64-BLOB
+    # [A-Za-z0-9+/]{40,} -> Letar efter Base64-alfabetet som är minst 40 tecken långt ({40,})
+    # =* -> Letar efter noll eller flera padding-tecken (=) i slutet
+    "base64_blob": r'[A-Za-z0-9+/]{40,}=*',
+
+    # Exempel: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..." (En publik krypteringsnyckel)
+    # SSH PUBLIC KEY
+    # ssh-rsa -> Den fasta strängen som definierar nyckeltypen
+    # AAAA -> SSH-nycklar börjar nästan alltid med fyra stycken A
+    "ssh_key": r'ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3}'
+
+}
+
+@regex_bp.route('/', methods=['POST'])
+def analyze():
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({"error": "Skicka JSON med fältet 'content'"}), 400
+    
+    text = data['content']
+    results = {}
+
+    for name, pattern in PATTERNS.items():
+        matches = re.findall(pattern, text)
         
-        # 2. re.finditer letar upp ALLA ställen där mönstret matchar texten.
-        # Det skapar ett "match-objekt" för varje träff som vi kan ställa frågor till.
-        for match in re.finditer(ex["pattern"], ex["text"]):
+        # Hantera om regexet har grupper (t.ex. html_links)
+        if matches and isinstance(matches[0], tuple):
+            matches = [m[0] for m in matches]
             
-            # 3. Vi skapar en egen "ordlista" (dictionary) för att spara informationen 
-            # på ett sätt som är lätt för t.ex. en hemsida eller JSON att förstå.
-            match_obj = {
-                # .group(0) returnerar hela den textsträng som fastnade i regex-fällan.
-                "full_match": match.group(0),
-                
-                # .start() och .end() ger oss exakta positioner (index) där matching startade resp slutade. 
-                # Det behövs för att t.ex. kunna stryka under eller färglägga texten.
-                "indices": [match.start(), match.end()],
-                
-                # .groups() hämtar allt som hamnat inom (parenteser).
-                # Om vi har flera parenteser får vi en lista med varje del för sig.
-                "groups": match.groups() # en tuple data struktur skpas och returnar av groups
-            }
-            
-            # 4. Lägg till träffen i vår lista för detta exempel
-            matches.append(match_obj)
-
-        lessons.append({
-            "lesson_title": ex["label"],
-            "source_text": ex["text"],
-            "regex_used": ex["pattern"],
-            "explanation": ex["desc"],
-            "results": matches
-        })
+        # Ta bort dubbletter och spara
+        results[name] = list(set(matches))
 
     return jsonify({
-        "course": "Python Regex 101",
-        "lessons": lessons
+        "status": "success",
+        "analysis": results
     })
+
+"""
+test json i thunder client via POST och i body
+{
+  "content": "ANALYSRAPPORT 2024-05-20\n--------------------------\nAnvändare: nisse.it-forensik@bolaget.se (Mobil: 070-1234567, Postnr: 123 45)\nSystem: Windows 11 på enhet C:\\\\Users\\\\Admin\\\\Downloads\\\\payload.exe\nNätverk: IPv4: 192.168.1.50, IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334, MAC: 00:1A:2B:3C:4D:5E\nLinux-spår: Hittade filer i /var/log/syslog och /etc/shadow\nHasher: MD5: 85202888629f635f3d3d6396f9a65d78, SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nSårbarhet: Detekterade försök mot CVE-2021-44228 via <a href=\"https://skadlig-sida.ru/exploit\">Klicka här</a>\nKod: Base64-sträng funnen: SGVsbG8gV29ybGQgdGhpcyBpcyBhIGJhc2U2NCB0ZXN0IHN0cmluZy4=\nSSH: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0testkey"
+}
+"""
