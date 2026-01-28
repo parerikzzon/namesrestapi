@@ -6,98 +6,125 @@ regex_bp = Blueprint('reg_bp', __name__)
 
 # --- Några vanliga regex ---
 PATTERNS = {
-    
-    # --- VARDAGLIG VALIDERING ---
-    # Exempel: "nisse.svensson@gmail.com", "info@foretag.se"
+    # --- VARDAGLIG VALIDERING / IDENTITETER ---
+
     # E-POST
-    # [a-z0-9._%+-]+ -> Matcha bokstäver/siffror/tecken EN eller FLERA gånger (+)
-    # @ -> Letar efter ett bokstavligt @-tecken
-    # \.[a-z]{2,} -> Letar efter en punkt (\.) följt av minst 2 bokstäver ({2,})
-    # [a-z0-9._%+-]+ -> Matcha bokstäver/siffror/tecken EN eller FLERA gånger (+)
-    # @ -> Letar efter ett bokstavligt @-tecken
-    # \.[a-z]{2,} -> Letar efter en punkt (\.) följt av minst 2 bokstäver ({2,})
+    # Exempel: "nisse.svensson@gmail.com", "info@foretag.se"
+    # [a-zA-Z0-9._%+-]+  -> lokaldel: bokstäver, siffror och vissa symboler, en eller flera gånger
+    # @                  -> bokstavligt snabel-a
+    # [a-zA-Z0-9.-]+     -> domännamn (ex: gmail, foretag.se)
+    # \.[a-zA-Z]{2,}     -> punkt + toppdomän med minst 2 bokstäver (.se, .com, .org...)
+    #
+    # Forensik/hot: Kan användas för att hitta kontakter, offer/förövare, phishing-avsändare
+    # i loggar, e-postdump och chatt-export.
     "email": r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
 
-    # Exempel: "123 45" eller "54321"
     # SVENSKT POSTNUMMER
-    # \d{3} -> Exakt tre siffror (\d)
-    # \s? -> Ett valfritt (?) mellanslag (\s)
-    # \d{2} -> Exakt två siffror till
+    # Exempel: "123 45" eller "54321"
+    # \d{3}  -> exakt tre siffror
+    # \s?    -> valfritt mellanslag
+    # \d{2}  -> exakt två siffror
+    #
+    # Forensik/hot: Kan peka på svensk adress, t.ex. i beställningsunderlag, leveransdata,
+    # eller läckta kundregister.
     "swe_postnummer": r'\d{3}\s?\d{2}',
 
-    # Exempel: "070-1234567", "0731234567", "076 1234567"
     # SVENSKT MOBILNUMMER
-    # 07[02369] -> Börjar på 07 följt av någon av siffrorna i haken []
-    # \s?-? -> Tillåter valfritt mellanslag ELLER bindestreck
+    # Exempel: "070-1234567", "0731234567", "076 1234567"
+    # 07[02369] -> börjar på 07 följt av ett giltigt mobilprefix
+    # \s?-?     -> valfritt mellanslag ELLER bindestreck
+    # \d{7}     -> exakt sju siffror
+    #
+    # Forensik/hot: Hjälper till att identifiera telefonnummer i phishing-SMS, WhatsApp-loggar
+    # eller läckta kontaktlistor som angripare använt.
     "swe_mobile": r'07[02369]\s?-?\d{7}',
 
-    # Exempel: href="https://google.com" (fångar det inuti citattecknen)
     # HTML-LÄNKAR
-    # href=" -> Letar efter den exakta textsträngen
-    # ([^"]*) -> Parenteser skapar en GRUPP. ^" betyder "allt utom citattecken". * betyder noll eller flera.
+    # Exempel: href="https://google.com" (fångar det inuti citattecknen)
+    # href="      -> letar efter den exakta textsträngen
+    # ([^"]*)     -> grupp: alla tecken som INTE är " (noll eller fler)
+    #
+    # Forensik/hot: Kan plocka ut alla länkar i HTML-mail eller webbsidor,
+    # t.ex. skadliga URL:er i phishingkampanjer eller exploit-sidor.
     "html_links": r'href="([^"]*)"',
-    
+
     # --- IT-FORENSIK: NÄTVERK & IDENTIFIERING ---
+
+    # IPv4-ADRESS (förenklad, validerar inte 0–255)
     # Exempel: "192.168.1.1", "8.8.8.8", "10.0.0.254"
-    # IPv4-ADRESS
-    # \b -> Word boundary: ser till att IP:n inte är en del av ett längre ord
-    # (?:[0-9]{1,3}\.){3} -> Repeterar gruppen (1-3 siffror + punkt) exakt 3 gånger
+    # \b                 -> word boundary, så vi inte fångar "123.4.5.6abc"
+    # (?:[0-9]{1,3}\.){3} -> tre grupper med 1–3 siffror + punkt
+    # [0-9]{1,3}         -> sista oktetten
+    #
+    # Forensik/hot: Används för att extrahera käll- och destinations-IP från loggar
+    # (t.ex. C2-servrar, skadliga IP:n, intern laterala rörelser).
     "ipv4": r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b',
 
+    # IPv6-ADRESS (förenklad utan alla komprimeringsvarianter)
     # Exempel: "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
-    # IPv6-ADRESS
-    # [0-9a-fA-F]{1,4} -> Matcha 1 till 4 hexadecimala tecken
-    # : -> Letar efter bokstavliga kolon som separerar grupperna
+    # (?:[0-9a-fA-F]{1,4}:){7} -> sju grupper av 1–4 hextecken + kolon
+    # [0-9a-fA-F]{1,4}         -> sista gruppen
+    #
+    # Forensik/hot: Hjälper till att hitta IPv6-källor i moderna loggar,
+    # t.ex. angripare som gömmer sig bakom IPv6-adresser.
     "ipv6": r'\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b',
 
-    # Exempel: "00:1A:2B:3C:4D:5E" eller "00-1A-2B-3C-4D-5E"
     # MAC-ADRESS
-    # [0-9a-fA-F]{2} -> Två hex-tecken (t.ex. 4A)
-    # [:-] -> Matcha antingen kolon ELLER bindestreck som separator
+    # Exempel: "00:1A:2B:3C:4D:5E" eller "00-1A-2B-3C-4D-5E"
+    # (?:[0-9a-fA-F]{2}[:-]){5} -> fem grupper av två hextecken + kolon/bindestreck
+    # [0-9a-fA-F]{2}            -> sista paret
+    #
+    # Forensik/hot: Kan användas för att binda aktivitet till specifik nätverksadapter/enhet
+    # (t.ex. en angripares laptop eller IoT-enhet).
     "mac_address": r'(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}',
-    
+
     # --- IT-FORENSIK: FILANALYS & MALWARE ---
-    # Exempel: "C:\Windows\System32\drivers\etc\hosts", "D:\Bilder\foto.jpg"
+
     # WINDOWS FILVÄG
-    # [a-zA-Z]:\\ -> Enhetsbokstav följt av kolon och ett bokstavligt backslash (dubbelt \\ behövs i kod)
-    # [^\\\/:*?"<>|\r\n]+ -> Matcha alla tecken som INTE är förbjudna i filnamn
+    # Exempel: "C:\Windows\System32\drivers\etc\hosts", "D:\Bilder\foto.jpg"
+    # [a-zA-Z]:\\          -> enhetsbokstav + kolon + backslash
+    # (?:[^\\\/:*?"<>|\r\n]+\\)* -> mappar: alla tillåtna tecken + \, upprepat
+    # [^\\\/:*?"<>|\r\n]*  -> sista fil- eller katalognamnet (kan vara tomt)
+    #
+    # Forensik/hot: Hitta var skadlig kod lagras/körs, t.ex. "C:\Users\...\payload.exe".
     "windows_path": r'[a-zA-Z]:\\(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*',
 
-    # Exempel: "/var/log/auth.log", "/etc/shadow", "/home/user/.bashrc"
     # LINUX FILVÄG
-    # / -> Måste börja med ett framåtlutat snedstreck
-    # (?:[\w.-]+/)+ -> Matcha mappar (bokstäver/siffror/punkt/streck + /) EN eller FLERA gånger
+    # Exempel: "/var/log/auth.log", "/etc/shadow", "/home/user/.bashrc"
+    # /                    -> börjar med root
+    # (?:[\w.-]+/)+        -> en eller flera mappar (bokstäver/siffror/._- + /)
+    # [\w.-]+              -> filnamn
+    #
+    # Forensik/hot: Hitta intressanta filer i loggar/rapporter, som /etc/shadow,
+    # loggar angripare rört eller nya binärer i /usr/local/bin.
     "linux_path": r'/(?:[\w.-]+/)+[\w.-]+',
 
-    # Exempel: "5d41402abc4b2a76b9719d911017c592" (32 tecken långt fingeravtryck)
     # MD5 HASH
-    # \b...\b -> Boundary: Säkerställer att vi hittar EXAKT 32 tecken, inte 32 tecken inuti något annat
+    # Exempel: "5d41402abc4b2a76b9719d911017c592" (32 hextecken)
+    # \b[0-9a-fA-F]{32}\b -> exakt 32 hextecken, avgränsat av word boundaries
+    #
+    # Forensik/hot: används för att identifiera filer via hash (malware-signaturer,
+    # IOC-listor, jämförelse mot threat intel).
     "md5_hash": r'\b[0-9a-fA-F]{32}\b',
 
-    # Exempel: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" (64 tecken)
     # SHA256 HASH
-    # {64} -> Letar efter exakt 64 hexadecimala tecken i följd
+    # Exempel: "e3b0c4...b855" (64 hextecken)
+    # \b[0-9a-fA-F]{64}\b -> exakt 64 hextecken
+    #
+    # Forensik/hot: samma användning som MD5 men modernare, används i många
+    # malware- och IOC-databaser.
     "sha256_hash": r'\b[0-9a-fA-F]{64}\b',
-    
+
     # --- IT-FORENSIK: SÅRBARHETER & KOD ---
-    # Exempel: "CVE-2021-44228", "CVE-2023-1234"
+
     # CVE-ID (Common Vulnerabilities and Exposures)
-    # CVE- -> Den fasta texten "CVE-"
-    # \d{4} -> Årtalet (4 siffror)
-    # -\d{4,7} -> Ett bindestreck följt av mellan 4 och 7 siffror (ID-numret)
-    "cve_id": r'CVE-\d{4}-\d{4,7}',
+    # Exempel: "CVE-2021-44228", "CVE-2023-1234"
+    # CVE-         -> fast prefix
+    # \d{4}        -> årtal
+    # -\d{4,7}     -> ett bindestreck + 4–7 siffror (ID)
+    #
+    # Forensik/hot: hitta vilka sårbarheter som nämns i loggar, rapporter och exp
 
-    # Exempel: "SGVsbG8gV29ybGQgdGhpcyBpcyBhIGJhc2U2NCB0ZXN0IHN0cmluZy4=" (Kodad data)
-    # BASE64-BLOB
-    # [A-Za-z0-9+/]{40,} -> Letar efter Base64-alfabetet som är minst 40 tecken långt ({40,})
-    # =* -> Letar efter noll eller flera padding-tecken (=) i slutet
-    "base64_blob": r'[A-Za-z0-9+/]{40,}=*',
-
-    # Exempel: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..." (En publik krypteringsnyckel)
-    # SSH PUBLIC KEY
-    # ssh-rsa -> Den fasta strängen som definierar nyckeltypen
-    # AAAA -> SSH-nycklar börjar nästan alltid med fyra stycken A
-    "ssh_key": r'ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3}'
 
 }
 
