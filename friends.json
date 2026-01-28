@@ -31,14 +31,20 @@
     },
     {
         "id": 7,
-        "name": "Sadf",
-        "email": "pei@du.se",
-        "status": "Asdf"
+        "name": "Nisse",
+        "email": "nisse@du.se",
+        "status": "Kompis"
     },
     {
-        "id": 2,
-        "name": "Jonna Love",
-        "email": "jonna@law.com",
-        "status": "Awesome"
+        "id": 7,
+        "name": "Nisse",
+        "email": "nisse@du.se",
+        "status": "Kompis"
+    },
+    {
+        "id": 8,
+        "name": "Ursula",
+        "email": "ursula@du.se",
+        "status": "No kompis"
     }
 ]
