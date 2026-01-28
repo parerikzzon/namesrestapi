@@ -57,7 +57,7 @@ friend_parser.add_argument('id',
     nullable=False, 
     help='ID is required and must be a valid integer.')
 
-# För övriga fält: Använd vår nya strikta sanitize_type
+# För övriga fält: Använd vår nya strikta egen gjorda funktion sanitize_type
 friend_parser.add_argument('name', type=sanitize_type, required=True, help='Name is required')
 friend_parser.add_argument('email', type=sanitize_type, required=True, help="Email is required")
 friend_parser.add_argument('status', type=sanitize_type, required=True, help="Status is required")
