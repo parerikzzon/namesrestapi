@@ -29,8 +29,8 @@ def skrapa_schema_data():
             info_strang = bokning.get('title', '')
             
             if info_strang:
-                # --- STRÄNG-MAGI (Nybörjarguide) ---
-                
+                #
+                #title=" 2026-01-27 08:00 - 12:00 H3LLJ_DITMG, GMI35S_V3NJJ, Lektion, Ulrika Artursson Wissa, Borlänge, B302 Lärosal/etage ID 669214" 
                 # Här gör vi "Clean Code": 
                 # .split(',') delar upp texten vid varje kommatecken till en lista (array)
                 # [p.strip() for p in ...] går igenom varje del och tar bort onödiga mellanslag direkt
@@ -38,7 +38,7 @@ def skrapa_schema_data():
                 
                 # Tiden ligger alltid i första delen: "2026-01-22 10:00 - 12:00"
                 # Vi delar den vid mellanslag för att få ut datum och klockslag separat
-                time_parts = parts[0].split(' ')
+                time_parts = parts[0].split(' ')# till array
                 
                 # --- LOGIK FÖR LÄRARE ---
                 # Ibland finns "Grupp X" på lärarens plats (index 3). 
