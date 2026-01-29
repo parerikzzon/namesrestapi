@@ -23,7 +23,7 @@ app = Flask(__name__)
 
 # Inställningar för databas (här en enkel JSON-fil) och säkerhet
 JSON_FRIENDS_FILE = 'friends.json'
-API_KEY = "abcd"
+
 
 # --- STRUKTUR ---
 # Registrera en Blueprint. Det gör att vi kan gruppera rutter.
